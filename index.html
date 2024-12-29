@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CRUD Example</title>
+  <title>GitHub Database CRUD</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,8 +13,12 @@
       display: block;
       margin: 10px 0 5px;
     }
-    input, button, table {
+    input, textarea, button {
       margin: 5px 0;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
     }
     table {
       width: 100%;
@@ -23,116 +27,136 @@
     }
     table, th, td {
       border: 1px solid #ddd;
-      text-align: left;
       padding: 8px;
-    }
-    .actions {
-      display: flex;
-      gap: 10px;
-    }
-    .output {
-      margin-top: 20px;
+      text-align: left;
     }
   </style>
 </head>
 <body>
-  <h1>CRUD Application</h1>
+  <h1>GitHub API Database CRUD</h1>
 
-  <h2>Create New Entry</h2>
-  <label for="name">Name:</label>
-  <input type="text" id="name" placeholder="Enter name">
-  <label for="email">Email:</label>
-  <input type="email" id="email" placeholder="Enter email">
-  <button onclick="createData()">Add Entry</button>
+  <label for="token">GitHub Token:</label>
+  <input type="text" id="token" placeholder="Enter your GitHub token">
 
-  <h2>Data Table</h2>
-  <table id="dataTable">
+  <h2>Create Data</h2>
+  <label for="recordName">Record Name:</label>
+  <input type="text" id="recordName" placeholder="Enter record name">
+  <label for="recordContent">Content (JSON):</label>
+  <textarea id="recordContent" placeholder='Enter JSON data (e.g., {"key": "value"})'></textarea>
+  <button onclick="createRecord()">Create Record</button>
+
+  <h2>Records</h2>
+  <button onclick="listRecords()">List Records</button>
+  <table id="recordsTable">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Email</th>
+        <th>File Name</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Data will be dynamically inserted here -->
+      <!-- Records will be dynamically populated here -->
     </tbody>
   </table>
 
   <script>
-    // Mock database
-    let database = [];
-    let currentId = 1;
+    const baseURL = 'https://api.github.com';
+    const username = 'RomeoAsis2023'; // Replace with your GitHub username
+    const repoName = 'webviewtester'; // Replace with your repository name
 
-    // Create Data
-    function createData() {
-      const name = document.getElementById('name').value;
-      const email = document.getElementById('email').value;
-
-      if (name && email) {
-        database.push({ id: currentId++, name, email });
-        renderTable();
-        clearInputs();
-      } else {
-        alert('Please fill in all fields!');
+    function setHeaders() {
+      const token = document.getElementById('token').value;
+      if (!token) {
+        alert("GitHub Token is required!");
+        throw new Error("Token missing");
       }
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
     }
 
-    // Read and Render Data
-    function renderTable() {
-      const tableBody = document.querySelector('#dataTable tbody');
-      tableBody.innerHTML = ''; // Clear existing table data
+    // Create Record (File in the Repository)
+    function createRecord() {
+      const recordName = document.getElementById('recordName').value;
+      const recordContent = document.getElementById('recordContent').value;
 
-      database.forEach(entry => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${entry.id}</td>
-          <td>${entry.name}</td>
-          <td>${entry.email}</td>
-          <td class="actions">
-            <button onclick="editData(${entry.id})">Edit</button>
-            <button onclick="deleteData(${entry.id})">Delete</button>
-          </td>
-        `;
-        tableBody.appendChild(row);
-      });
-    }
-
-    // Update Data
-    function editData(id) {
-      const entry = database.find(item => item.id === id);
-      if (entry) {
-        const newName = prompt('Enter new name:', entry.name);
-        const newEmail = prompt('Enter new email:', entry.email);
-
-        if (newName && newEmail) {
-          entry.name = newName;
-          entry.email = newEmail;
-          renderTable();
-        } else {
-          alert('Both fields are required!');
-        }
+      if (!recordName || !recordContent) {
+        alert("Record name and content are required!");
+        return;
       }
+
+      const filePath = `data/${recordName}.json`; // Store files in a "data" folder
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+        method: 'PUT',
+        headers: setHeaders(),
+        body: JSON.stringify({
+          message: `Create record: ${recordName}`,
+          content: btoa(recordContent), // Convert to Base64
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          alert("Record created successfully!");
+          listRecords();
+        })
+        .catch(err => console.error(err));
     }
 
-    // Delete Data
-    function deleteData(id) {
-      const confirmDelete = confirm('Are you sure you want to delete this entry?');
-      if (confirmDelete) {
-        database = database.filter(item => item.id !== id);
-        renderTable();
-      }
+    // List Records
+    function listRecords() {
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/data`, { headers: setHeaders() })
+        .then(response => response.json())
+        .then(data => {
+          const tableBody = document.querySelector('#recordsTable tbody');
+          tableBody.innerHTML = ''; // Clear previous entries
+          data.forEach(file => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${file.name}</td>
+              <td>
+                <button onclick="viewRecord('${file.name}')">View</button>
+                <button onclick="deleteRecord('${file.name}')">Delete</button>
+              </td>
+            `;
+            tableBody.appendChild(row);
+          });
+        })
+        .catch(err => console.error(err));
     }
 
-    // Clear Input Fields
-    function clearInputs() {
-      document.getElementById('name').value = '';
-      document.getElementById('email').value = '';
+    // View Record
+    function viewRecord(fileName) {
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/data/${fileName}`, { headers: setHeaders() })
+        .then(response => response.json())
+        .then(data => {
+          const content = atob(data.content); // Decode Base64 content
+          alert(`Content of ${fileName}:\n${content}`);
+        })
+        .catch(err => console.error(err));
     }
 
-    // Initialize Table
-    renderTable();
+    // Delete Record
+    function deleteRecord(fileName) {
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/data/${fileName}`, { headers: setHeaders() })
+        .then(response => response.json())
+        .then(data => {
+          fetch(`${baseURL}/repos/${username}/${repoName}/contents/data/${fileName}`, {
+            method: 'DELETE',
+            headers: setHeaders(),
+            body: JSON.stringify({
+              message: `Delete record: ${fileName}`,
+              sha: data.sha, // Required to delete a file
+            })
+          })
+            .then(() => {
+              alert("Record deleted successfully!");
+              listRecords();
+            })
+            .catch(err => console.error(err));
+        })
+        .catch(err => console.error(err));
+    }
   </script>
 </body>
 </html>
