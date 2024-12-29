@@ -51,35 +51,35 @@
   }
 
   function createOrUpdateSection() {
-    const sectionName = document.getElementById('sectionName').value.trim();
-    const sectionContent = document.getElementById('sectionContent').value.trim();
+  const sectionName = document.getElementById('sectionName').value.trim();
+  const sectionContent = document.getElementById('sectionContent').value.trim();
 
-    if (!sectionName || !sectionContent) {
-      alert("Section name and content are required!");
-      return;
-    }
-
-    // Create JSON with HTML content
-    const jsonData = {
-      content: sectionContent // Allow raw HTML in content
-    };
-
-    const filePath = `resume/${sectionName}.json`;
-    fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
-      method: 'PUT',
-      headers: setHeaders(),
-      body: JSON.stringify({
-        message: `Update section: ${sectionName}`,
-        content: btoa(JSON.stringify(jsonData, null, 2)), // Encode JSON
-      }),
-    })
-      .then((response) => response.json())
-      .then(() => {
-        alert("Section saved successfully!");
-        listSections();
-      })
-      .catch((err) => console.error(err));
+  if (!sectionName || !sectionContent) {
+    alert("Section name and content are required!");
+    return;
   }
+
+  // Create JSON with raw HTML content
+  const jsonData = {
+    content: sectionContent
+  };
+
+  const filePath = `resume/${sectionName}.json`;
+  fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+    method: 'PUT',
+    headers: setHeaders(),
+    body: JSON.stringify({
+      message: `Update section: ${sectionName}`,
+      content: btoa(JSON.stringify(jsonData)), // Base64 encode JSON data
+    }),
+  })
+    .then((response) => response.json())
+    .then(() => {
+      alert("Section saved successfully!");
+      listSections();
+    })
+    .catch((err) => console.error("Error saving section:", err));
+}
 
   function listSections() {
     fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`, {
@@ -105,19 +105,41 @@
       .catch(err => console.error(err));
   }
 
-  function editSection(fileName) {
-    const filePath = `resume/${fileName}`;
-    fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
-      headers: setHeaders(),
+function editSection(fileName) {
+  const filePath = `resume/${fileName}`;
+  fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+    headers: setHeaders(),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      const content = JSON.parse(atob(data.content)); // Decode Base64 and parse JSON
+      document.getElementById('sectionName').value = fileName.replace('.json', '');
+      document.getElementById('sectionContent').value = content.content; // Populate the raw HTML content
     })
-      .then((response) => response.json())
-      .then((data) => {
-        const content = JSON.parse(atob(data.content)); // Decode Base64 and parse JSON
-        document.getElementById('sectionName').value = fileName.replace('.json', '');
-        document.getElementById('sectionContent').value = content.content; // Populate HTML content
-      })
-      .catch((err) => console.error(err));
-  }
+    .catch((err) => console.error("Error editing section:", err));
+}
+
+  function renderSectionsToHTML() {
+  fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`, {
+    headers: setHeaders(),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      const resumeContainer = document.getElementById("resumeContent");
+      resumeContainer.innerHTML = ""; // Clear current content
+
+      data.forEach((file) => {
+        fetch(file.download_url)
+          .then((res) => res.json())
+          .then((content) => {
+            const sectionDiv = document.createElement("div");
+            sectionDiv.innerHTML = content.content; // Render raw HTML content
+            resumeContainer.appendChild(sectionDiv);
+          });
+      });
+    })
+    .catch((err) => console.error("Error rendering sections:", err));
+}
 
   function deleteSection(fileName) {
     const filePath = `resume/${fileName}`;
