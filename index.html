@@ -24,53 +24,51 @@
   </div>
 
   <script>
-   function loadResume() {
-  const baseURL = 'https://api.github.com';
-    const username = 'RomeoAsis2023'; // Replace with your GitHub username
-    const repoName = 'webviewtester'; // Replace with your repository name
+    function loadResume() {
+      const baseURL = 'https://api.github.com';
+      const username = 'RomeoAsis2023'; // Replace with your GitHub username
+      const repoName = 'webviewtester'; // Replace with your repository name
 
-  fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Failed to fetch resume data. Status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      const resumeContainer = document.getElementById('resumeContent');
-      resumeContainer.innerHTML = ''; // Clear existing content
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to fetch resume data. Status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          const resumeContainer = document.getElementById('resumeContent');
+          resumeContainer.innerHTML = ''; // Clear existing content
 
-      // Iterate over each file in the 'resume' folder
-      data.forEach(file => {
-        fetch(file.download_url)
-          .then(fileResponse => {
-            if (!fileResponse.ok) {
-              throw new Error(`Failed to fetch file content for ${file.name}`);
-            }
-            return fileResponse.json(); // Parse JSON content
-          })
-          .then(content => {
-            // Dynamically create sections for each resume part
-            if (content.title && content.content) {
-              const section = document.createElement('section');
-              section.innerHTML = `
-                <h2>${content.title}</h2>
-                <p>${content.content}</p>
-              `;
-              resumeContainer.appendChild(section);
-            } else {
-              console.warn(`Invalid structure in ${file.name}`);
-            }
-          })
-          .catch(err => console.error(`Error fetching file: ${err.message}`));
-      });
-    })
-    .catch(err => console.error(`Error loading resume: ${err.message}`));
-}
+          // Iterate over each file in the 'resume' folder
+          data.forEach(file => {
+            fetch(file.download_url)
+              .then(fileResponse => {
+                if (!fileResponse.ok) {
+                  throw new Error(`Failed to fetch file content for ${file.name}`);
+                }
+                return fileResponse.text(); // Get raw text content
+              })
+              .then(fileContent => {
+                const parsedContent = JSON.parse(fileContent); // Parse JSON
+                if (parsedContent.content) {
+                  const section = document.createElement('section');
+                  section.innerHTML = `
+                    ${parsedContent.content} <!-- Render raw HTML content -->
+                  `;
+                  resumeContainer.appendChild(section);
+                } else {
+                  console.warn(`Invalid structure in ${file.name}`);
+                }
+              })
+              .catch(err => console.error(`Error fetching file: ${err.message}`));
+          });
+        })
+        .catch(err => console.error(`Error loading resume: ${err.message}`));
+    }
 
-// Load resume data on page load
-document.addEventListener('DOMContentLoaded', loadResume);
-
+    // Load resume data on page load
+    document.addEventListener('DOMContentLoaded', loadResume);
   </script>
 </body>
 </html>
