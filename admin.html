@@ -140,14 +140,38 @@
     };
 
     const filePath = `resume/${sectionName}.json`;
+
     fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
-      method: 'PUT',
       headers: setHeaders(),
-      body: JSON.stringify({
-        message: `Update section: ${sectionName}`,
-        content: btoa(JSON.stringify(jsonData)), // Base64 encode JSON data
-      }),
     })
+      .then((response) => {
+        if (response.status === 404) {
+          // File does not exist, proceed to create it
+          return null;
+        }
+        if (!response.ok) {
+          throw new Error(`Failed to fetch existing file: ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then((existingFile) => {
+        const payload = {
+          message: `Update section: ${sectionName}`,
+          content: btoa(JSON.stringify(jsonData)), // Encode JSON data as Base64
+        };
+
+        // If the file exists, include the SHA in the request to update it
+        if (existingFile && existingFile.sha) {
+          payload.sha = existingFile.sha;
+        }
+
+        // Save or update the file
+        return fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+          method: 'PUT',
+          headers: setHeaders(),
+          body: JSON.stringify(payload),
+        });
+      })
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to save section: ${response.statusText}`);
@@ -206,33 +230,6 @@
       .catch((err) => console.error("Error editing section:", err));
   }
 
-  function renderSectionsToHTML() {
-    fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`, {
-      headers: setHeaders(),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to render sections: ${response.statusText}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        const resumeContainer = document.getElementById("resumeContent");
-        resumeContainer.innerHTML = ""; // Clear current content
-
-        data.forEach((file) => {
-          fetch(file.download_url)
-            .then((res) => res.json())
-            .then((content) => {
-              const sectionDiv = document.createElement("div");
-              sectionDiv.innerHTML = content.content; // Render raw HTML content
-              resumeContainer.appendChild(sectionDiv);
-            });
-        });
-      })
-      .catch((err) => console.error("Error rendering sections:", err));
-  }
-
   function deleteSection(fileName) {
     const filePath = `resume/${fileName}`;
     fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
@@ -245,28 +242,28 @@
         return response.json();
       })
       .then(data => {
-        fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+        return fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
           method: 'DELETE',
           headers: setHeaders(),
           body: JSON.stringify({
             message: `Delete section: ${fileName}`,
             sha: data.sha,
           }),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`Failed to delete section: ${response.statusText}`);
-            }
-            alert("Section deleted successfully!");
-            listSections();
-          })
-          .catch(err => console.error("Error deleting section:", err));
+        });
       })
-      .catch(err => console.error("Error loading section for deletion:", err));
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to delete section: ${response.statusText}`);
+        }
+        alert("Section deleted successfully!");
+        listSections();
+      })
+      .catch((err) => console.error("Error deleting section:", err));
   }
 
   document.addEventListener('DOMContentLoaded', checkAuthentication);
 </script>
+
 
 </body>
 </html>
