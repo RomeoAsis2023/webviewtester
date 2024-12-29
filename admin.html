@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Admin Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input, textarea, button {
+      margin: 5px 0;
+      width: 100%;
+    }
+    textarea {
+      height: 100px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h1>Resume Admin Panel</h1>
+  <label for="token">GitHub Token:</label>
+  <input type="password" id="token" placeholder="Enter your GitHub token">
+
+  <h2>Manage Resume Sections</h2>
+  <label for="sectionName">Section Name:</label>
+  <input type="text" id="sectionName" placeholder="e.g., About, Education, Experience">
+  <label for="sectionContent">Section Content (JSON):</label>
+  <textarea id="sectionContent" placeholder='Enter JSON data (e.g., {"title": "About Me", "content": "Your content here"})'></textarea>
+  <button onclick="createSection()">Save Section</button>
+
+  <h2>Resume Sections</h2>
+  <button onclick="listSections()">Load Sections</button>
+  <table>
+    <thead>
+      <tr>
+        <th>Section</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="sectionsTable">
+      <!-- Resume sections will be dynamically listed here -->
+    </tbody>
+  </table>
+
+  <script>
+    const baseURL = 'https://api.github.com';
+    const username = 'RomeoAsis2023'; // Replace with your GitHub username
+    const repoName = 'webviewtester'; // Replace with your repository name
+
+    function setHeaders() {
+      const token = document.getElementById('token').value;
+      if (!token) {
+        alert("GitHub Token is required!");
+        throw new Error("Token missing");
+      }
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+    }
+
+    // Create or Update Section
+    function createSection() {
+      const sectionName = document.getElementById('sectionName').value;
+      const sectionContent = document.getElementById('sectionContent').value;
+
+      if (!sectionName || !sectionContent) {
+        alert("Section name and content are required!");
+        return;
+      }
+
+      const filePath = `resume/${sectionName}.json`;
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+        method: 'PUT',
+        headers: setHeaders(),
+        body: JSON.stringify({
+          message: `Update section: ${sectionName}`,
+          content: btoa(sectionContent), // Convert to Base64
+        })
+      })
+        .then(response => response.json())
+        .then(() => {
+          alert("Section saved successfully!");
+          listSections();
+        })
+        .catch(err => console.error(err));
+    }
+
+    // List Sections
+    function listSections() {
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`, {
+        headers: setHeaders()
+      })
+        .then(response => response.json())
+        .then(data => {
+          const tableBody = document.getElementById('sectionsTable');
+          tableBody.innerHTML = ''; // Clear existing rows
+
+          data.forEach(file => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${file.name}</td>
+              <td>
+                <button onclick="deleteSection('${file.name}')">Delete</button>
+              </td>
+            `;
+            tableBody.appendChild(row);
+          });
+        })
+        .catch(err => console.error(err));
+    }
+
+    // Delete Section
+    function deleteSection(fileName) {
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume/${fileName}`, {
+        headers: setHeaders()
+      })
+        .then(response => response.json())
+        .then(data => {
+          fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume/${fileName}`, {
+            method: 'DELETE',
+            headers: setHeaders(),
+            body: JSON.stringify({
+              message: `Delete section: ${fileName}`,
+              sha: data.sha, // Required to delete file
+            })
+          })
+            .then(() => {
+              alert("Section deleted successfully!");
+              listSections();
+            })
+            .catch(err => console.error(err));
+        })
+        .catch(err => console.error(err));
+    }
+  </script>
+</body>
+</html>
