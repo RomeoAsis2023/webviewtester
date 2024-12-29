@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fullscreen Tester</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    #url-input {
+      padding: 10px;
+      width: 80%;
+      max-width: 500px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 5px;
+    }
+    #view-url, #enter-fullscreen {
+      padding: 15px 30px;
+      background-color: blue;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    iframe {
+      display: none;
+      border: none;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+   <div style="padding: 20px;">
+   <input type="text" id="url-input" placeholder="Enter URL to view in fullscreen">
+   <button id="view-url">View URL in Fullscreen</button>  
+   </div>
+  <iframe id="url-iframe"></iframe>
+  
+  <script>
+    const viewUrlButton = document.getElementById('view-url');
+    const fullscreenButton = document.getElementById('enter-fullscreen');
+    const iframe = document.getElementById('url-iframe');
+
+    function enterFullscreen(element) {
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
+      } else if (element.webkitRequestFullscreen) { // Safari
+        element.webkitRequestFullscreen();
+      } else if (element.msRequestFullscreen) { // IE11
+        element.msRequestFullscreen();
+      } else {
+        alert("Fullscreen mode is not supported on this device/browser.");
+      }
+    }
+
+    // Handle "View URL in Fullscreen" button click
+    viewUrlButton.addEventListener('click', () => {
+      const url = document.getElementById('url-input').value.trim();
+      if (!url) {
+        alert("Please enter a valid URL.");
+        return;
+      }
+
+      // Set iframe source and show it
+      iframe.src = url.startsWith("http") ? url : `https://${url}`;
+      iframe.style.display = "block";
+
+      // Enter fullscreen for the iframe
+      iframe.onload = () => {
+        enterFullscreen(iframe);
+      };
+    });
+
+ 
+  </script>
+</body>
+</html>
