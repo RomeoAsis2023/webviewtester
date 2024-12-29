@@ -126,61 +126,69 @@
   }
 
   function createOrUpdateSection() {
-    const sectionName = document.getElementById('sectionName').value.trim();
-    const sectionContent = document.getElementById('sectionContent').value;
+  const sectionName = document.getElementById('sectionName').value.trim();
+  const sectionContent = document.getElementById('sectionContent').value;
 
-    if (!sectionName || !sectionContent) {
-      alert("Section name and content are required!");
-      return;
-    }
-
-    // Create JSON object with raw HTML content
-    const jsonData = {
-      content: sectionContent
-    };
-
-    const filePath = `resume/${sectionName}.json`;
-
-    fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
-      headers: setHeaders(),
-    })
-      .then((response) => {
-        if (response.status === 404) {
-          // File does not exist, proceed to create it
-          return null;
-        }
-        if (!response.ok) {
-          throw new Error(`Failed to fetch existing file: ${response.statusText}`);
-        }
-        return response.json();
-      })
-      .then((existingFile) => {
-        const payload = {
-          message: `Update section: ${sectionName}`,
-          content: btoa(JSON.stringify(jsonData)), // Encode JSON data as Base64
-        };
-
-        // If the file exists, include the SHA in the request to update it
-        if (existingFile && existingFile.sha) {
-          payload.sha = existingFile.sha;
-        }
-
-        // Save or update the file
-        return fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
-          method: 'PUT',
-          headers: setHeaders(),
-          body: JSON.stringify(payload),
-        });
-      })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to save section: ${response.statusText}`);
-        }
-        alert("Section saved successfully!");
-        listSections();
-      })
-      .catch((err) => console.error("Error saving section:", err));
+  if (!sectionName || !sectionContent) {
+    alert("Section name and content are required!");
+    return;
   }
+
+  // Create JSON object with raw HTML content
+  const jsonData = {
+    content: sectionContent
+  };
+
+  const filePath = `resume/${sectionName}.json`;
+
+  // Fetch the file to determine whether to create or update
+  fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+    headers: setHeaders(),
+  })
+    .then((response) => {
+      if (response.status === 404) {
+        // File does not exist, proceed to create it
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`Error fetching existing file: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then((existingFile) => {
+      const payload = {
+        message: `Update section: ${sectionName}`,
+        content: btoa(JSON.stringify(jsonData)), // Base64 encode JSON data
+      };
+
+      // If the file exists, include the SHA for updating
+      if (existingFile && existingFile.sha) {
+        payload.sha = existingFile.sha;
+      }
+
+      // Send the request to create or update the file
+      return fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
+        method: 'PUT',
+        headers: setHeaders(),
+        body: JSON.stringify(payload),
+      });
+    })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to save section: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(() => {
+      alert("Section saved successfully!");
+      listSections(); // Refresh the list
+    })
+    .catch((err) => {
+      console.error("Error saving section:", err);
+      alert(`Error: ${err.message}`);
+    });
+}
+
 
   function listSections() {
     fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`, {
