@@ -3,88 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fullscreen Tester</title>
+  <title>GitHub CRUD Example</title>
   <style>
     body {
-      background-color: black;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
       font-family: Arial, sans-serif;
+      margin: 20px;
     }
-    #url-input {
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input, button {
+      margin: 5px 0;
+    }
+    .output {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: #f4f4f4;
       padding: 10px;
-      width: 80%;
-      max-width: 500px;
-      font-size: 16px;
-      margin-bottom: 10px;
-      border: none;
-      border-radius: 5px;
-    }
-    #view-url, #enter-fullscreen {
-      padding: 15px 30px;
-      background-color: blue;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 18px;
-      margin-top: 10px;
-    }
-    iframe {
-      display: none;
-      border: none;
-      width: 100vw;
-      height: 100vh;
+      border: 1px solid #ddd;
     }
   </style>
 </head>
 <body>
-   <div style="padding: 20px;">
-   <input type="text" id="url-input" placeholder="Enter URL to view in fullscreen">
-   <button id="view-url">View URL in Fullscreen</button>  
-   </div>
-  <iframe id="url-iframe"></iframe>
-  
-  <script>
-    const viewUrlButton = document.getElementById('view-url');
-    const fullscreenButton = document.getElementById('enter-fullscreen');
-    const iframe = document.getElementById('url-iframe');
+  <h1>GitHub CRUD Operations</h1>
+  <label for="token">GitHub Token:</label>
+  <input type="text" id="token" placeholder="Enter your GitHub token">
 
-    function enterFullscreen(element) {
-      if (element.requestFullscreen) {
-        element.requestFullscreen();
-      } else if (element.webkitRequestFullscreen) { // Safari
-        element.webkitRequestFullscreen();
-      } else if (element.msRequestFullscreen) { // IE11
-        element.msRequestFullscreen();
-      } else {
-        alert("Fullscreen mode is not supported on this device/browser.");
-      }
+  <h2>Create Repository</h2>
+  <label for="repoName">Repository Name:</label>
+  <input type="text" id="repoName" placeholder="Enter repository name">
+  <button onclick="createRepo()">Create Repository</button>
+
+  <h2>Read Repositories</h2>
+  <button onclick="listRepos()">List My Repositories</button>
+
+  <h2>Update Repository</h2>
+  <label for="updateRepoName">Old Repository Name:</label>
+  <input type="text" id="updateRepoName" placeholder="Enter old repository name">
+  <label for="newRepoName">New Repository Name:</label>
+  <input type="text" id="newRepoName" placeholder="Enter new repository name">
+  <button onclick="updateRepo()">Update Repository</button>
+
+  <h2>Delete Repository</h2>
+  <label for="deleteRepoName">Repository Name:</label>
+  <input type="text" id="deleteRepoName" placeholder="Enter repository name">
+  <button onclick="deleteRepo()">Delete Repository</button>
+
+  <h2>Output</h2>
+  <div class="output" id="output"></div>
+
+  <script>
+    const baseURL = 'https://api.github.com';
+
+    function setHeaders() {
+      const token = document.getElementById('token').value;
+      return {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+      };
     }
 
-    // Handle "View URL in Fullscreen" button click
-    viewUrlButton.addEventListener('click', () => {
-      const url = document.getElementById('url-input').value.trim();
-      if (!url) {
-        alert("Please enter a valid URL.");
-        return;
-      }
+    function createRepo() {
+      const repoName = document.getElementById('repoName').value;
+      fetch(`${baseURL}/user/repos`, {
+        method: 'POST',
+        headers: setHeaders(),
+        body: JSON.stringify({ name: repoName, private: true })
+      })
+        .then(response => response.json())
+        .then(data => displayOutput(data))
+        .catch(err => displayOutput(err));
+    }
 
-      // Set iframe source and show it
-      iframe.src = url.startsWith("http") ? url : `https://${url}`;
-      iframe.style.display = "block";
+    function listRepos() {
+      fetch(`${baseURL}/user/repos`, { headers: setHeaders() })
+        .then(response => response.json())
+        .then(data => displayOutput(data))
+        .catch(err => displayOutput(err));
+    }
 
-      // Enter fullscreen for the iframe
-      iframe.onload = () => {
-        enterFullscreen(iframe);
-      };
-    });
+    function updateRepo() {
+      const oldName = document.getElementById('updateRepoName').value;
+      const newName = document.getElementById('newRepoName').value;
+      const username = 'RomeoAsis2023'; // Add your GitHub username
+      fetch(`${baseURL}/repos/${username}/${oldName}`, {
+        method: 'PATCH',
+        headers: setHeaders(),
+        body: JSON.stringify({ name: newName })
+      })
+        .then(response => response.json())
+        .then(data => displayOutput(data))
+        .catch(err => displayOutput(err));
+    }
 
- 
+    function deleteRepo() {
+      const repoName = document.getElementById('deleteRepoName').value;
+      const username = 'RomeoAsis2023'; // Add your GitHub username
+      fetch(`${baseURL}/repos/${username}/${repoName}`, {
+        method: 'DELETE',
+        headers: setHeaders()
+      })
+        .then(response => {
+          if (response.status === 204) {
+            displayOutput('Repository deleted successfully.');
+          } else {
+            return response.json();
+          }
+        })
+        .then(data => data && displayOutput(data))
+        .catch(err => displayOutput(err));
+    }
+
+    function displayOutput(data) {
+      document.getElementById('output').innerText = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
   </script>
 </body>
 </html>
