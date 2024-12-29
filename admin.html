@@ -80,6 +80,7 @@
 
  
     const hashedPassword = "4e8c7dabc5ac31ef112b447233408c69e203f6e90507d39b8db9c4f421122b62";
+    
 
     // Function to hash input using SHA-256
     async function hashPassword(password) {
@@ -93,7 +94,7 @@
 
     // Authenticate user
     async function authenticate() {
-      const inputPassword = document.getElementById("password").value;
+      const inputPassword = document.getElementById("password").value.trim();
       const inputHashed = await hashPassword(inputPassword);
 
       if (inputHashed === hashedPassword) {
