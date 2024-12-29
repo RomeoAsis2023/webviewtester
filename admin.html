@@ -9,6 +9,9 @@
       font-family: Arial, sans-serif;
       margin: 20px;
     }
+    .hidden {
+      display: none;
+    }
     label {
       display: block;
       margin: 10px 0 5px;
@@ -33,36 +36,87 @@
   </style>
 </head>
 <body>
-  <h1>Resume Admin Panel</h1>
-  <label for="token">GitHub Token:</label>
-  <input type="password" id="token" placeholder="Enter your GitHub token">
+  <!-- Authentication Section -->
+  <div id="authSection">
+    <h1>Admin Login</h1>
+    <label for="password">Enter Password:</label>
+    <input type="password" id="password" placeholder="Enter admin password">
+    <button onclick="authenticate()">Login</button>
+    <p id="authError" style="color: red; display: none;">Incorrect password. Try again.</p>
+  </div>
 
-  <h2>Manage Resume Sections</h2>
-  <label for="sectionName">Section Name:</label>
-  <input type="text" id="sectionName" placeholder="e.g., About, Education, Experience">
-  <label for="sectionContent">Section Content (JSON):</label>
-  <textarea id="sectionContent" placeholder='Enter JSON data (e.g., {"title": "About Me", "content": "Your content here"})'></textarea>
-  <button onclick="createSection()">Save Section</button>
+  <!-- Admin Section -->
+  <div id="adminSection" class="hidden">
+    <h1>Resume Admin Panel</h1>
+    <label for="token">GitHub Token:</label>
+    <input type="password" id="token" placeholder="Enter your GitHub token">
 
-  <h2>Resume Sections</h2>
-  <button onclick="listSections()">Load Sections</button>
-  <table>
-    <thead>
-      <tr>
-        <th>Section</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="sectionsTable">
-      <!-- Resume sections will be dynamically listed here -->
-    </tbody>
-  </table>
+    <h2>Manage Resume Sections</h2>
+    <label for="sectionName">Section Name:</label>
+    <input type="text" id="sectionName" placeholder="e.g., About, Education, Experience">
+    <label for="sectionContent">Section Content (JSON):</label>
+    <textarea id="sectionContent" placeholder='Enter JSON data (e.g., {"title": "About Me", "content": "Your content here"})'></textarea>
+    <button onclick="createSection()">Save Section</button>
+
+    <h2>Resume Sections</h2>
+    <button onclick="listSections()">Load Sections</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Section</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="sectionsTable">
+        <!-- Resume sections will be dynamically listed here -->
+      </tbody>
+    </table>
+  </div>
 
   <script>
     const baseURL = 'https://api.github.com';
     const username = 'RomeoAsis2023'; // Replace with your GitHub username
     const repoName = 'webviewtester'; // Replace with your repository name
+    const hashedPassword = '34f3d9912ad1f05df1e6710d9f6dd1ed'; 
 
+
+    function md5(string) {
+      return crypto.subtle.digest("MD5", new TextEncoder().encode(string)).then(hash => {
+        return Array.from(new Uint8Array(hash))
+          .map(byte => byte.toString(16).padStart(2, "0"))
+          .join("");
+      });
+    }
+
+    // Authenticate user
+    async function authenticate() {
+      const inputPassword = document.getElementById("password").value;
+
+      // Hash the entered password and compare
+      const inputHashed = await md5(inputPassword);
+      if (inputHashed === hashedPassword) {
+        localStorage.setItem("authenticated", "true"); // Save authentication flag
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("adminSection").classList.remove("hidden");
+      } else {
+        const error = document.getElementById("authError");
+        error.style.display = "block";
+        setTimeout(() => {
+          error.style.display = "none";
+        }, 3000);
+      }
+    }
+
+    // Check authentication on page load
+    function checkAuthentication() {
+      const isAuthenticated = localStorage.getItem("authenticated");
+      if (isAuthenticated === "true") {
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("adminSection").classList.remove("hidden");
+      }
+    }
+
+    // GitHub API integration
     function setHeaders() {
       const token = document.getElementById('token').value;
       if (!token) {
@@ -75,7 +129,6 @@
       };
     }
 
-    // Create or Update Section
     function createSection() {
       const sectionName = document.getElementById('sectionName').value;
       const sectionContent = document.getElementById('sectionContent').value;
@@ -102,7 +155,6 @@
         .catch(err => console.error(err));
     }
 
-    // List Sections
     function listSections() {
       fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`, {
         headers: setHeaders()
@@ -126,7 +178,6 @@
         .catch(err => console.error(err));
     }
 
-    // Delete Section
     function deleteSection(fileName) {
       fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume/${fileName}`, {
         headers: setHeaders()
@@ -149,6 +200,9 @@
         })
         .catch(err => console.error(err));
     }
+
+    // Check authentication on page load
+    document.addEventListener('DOMContentLoaded', checkAuthentication);
   </script>
 </body>
 </html>
