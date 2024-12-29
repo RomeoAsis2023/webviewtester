@@ -3,160 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GitHub Database CRUD</title>
+  <title>My Resume</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
     }
-    label {
-      display: block;
-      margin: 10px 0 5px;
+    section {
+      margin-bottom: 20px;
     }
-    input, textarea, button {
-      margin: 5px 0;
-    }
-    textarea {
-      width: 100%;
-      height: 100px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
+    h2 {
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>GitHub API Database CRUD</h1>
-
-  <label for="token">GitHub Token:</label>
-  <input type="text" id="token" placeholder="Enter your GitHub token">
-
-  <h2>Create Data</h2>
-  <label for="recordName">Record Name:</label>
-  <input type="text" id="recordName" placeholder="Enter record name">
-  <label for="recordContent">Content (JSON):</label>
-  <textarea id="recordContent" placeholder='Enter JSON data (e.g., {"key": "value"})'></textarea>
-  <button onclick="createRecord()">Create Record</button>
-
-  <h2>Records</h2>
-  <button onclick="listRecords()">List Records</button>
-  <table id="recordsTable">
-    <thead>
-      <tr>
-        <th>File Name</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Records will be dynamically populated here -->
-    </tbody>
-  </table>
+  <h1>My Resume</h1>
+  <div id="resumeContent">
+    <!-- Resume sections will be dynamically loaded here -->
+  </div>
 
   <script>
     const baseURL = 'https://api.github.com';
     const username = 'RomeoAsis2023'; // Replace with your GitHub username
     const repoName = 'webviewtester'; // Replace with your repository name
 
-    function setHeaders() {
-      const token = document.getElementById('token').value;
-      if (!token) {
-        alert("GitHub Token is required!");
-        throw new Error("Token missing");
-      }
-      return {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
-    }
-
-    // Create Record (File in the Repository)
-    function createRecord() {
-      const recordName = document.getElementById('recordName').value;
-      const recordContent = document.getElementById('recordContent').value;
-
-      if (!recordName || !recordContent) {
-        alert("Record name and content are required!");
-        return;
-      }
-
-      const filePath = `data/${recordName}.json`; // Store files in a "data" folder
-      fetch(`${baseURL}/repos/${username}/${repoName}/contents/${filePath}`, {
-        method: 'PUT',
-        headers: setHeaders(),
-        body: JSON.stringify({
-          message: `Create record: ${recordName}`,
-          content: btoa(recordContent), // Convert to Base64
-        })
-      })
+    function loadResume() {
+      fetch(`${baseURL}/repos/${username}/${repoName}/contents/resume`)
         .then(response => response.json())
         .then(data => {
-          alert("Record created successfully!");
-          listRecords();
-        })
-        .catch(err => console.error(err));
-    }
+          const resumeContainer = document.getElementById('resumeContent');
+          resumeContainer.innerHTML = ''; // Clear existing content
 
-    // List Records
-    function listRecords() {
-      fetch(`${baseURL}/repos/${username}/${repoName}/contents/data`, { headers: setHeaders() })
-        .then(response => response.json())
-        .then(data => {
-          const tableBody = document.querySelector('#recordsTable tbody');
-          tableBody.innerHTML = ''; // Clear previous entries
           data.forEach(file => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td>${file.name}</td>
-              <td>
-                <button onclick="viewRecord('${file.name}')">View</button>
-                <button onclick="deleteRecord('${file.name}')">Delete</button>
-              </td>
-            `;
-            tableBody.appendChild(row);
+            fetch(file.download_url)
+              .then(res => res.json())
+              .then(content => {
+                const section = document.createElement('section');
+                section.innerHTML = `
+                  <h2>${content.title}</h2>
+                  <p>${content.content}</p>
+                `;
+                resumeContainer.appendChild(section);
+              });
           });
         })
         .catch(err => console.error(err));
     }
 
-    // View Record
-    function viewRecord(fileName) {
-      fetch(`${baseURL}/repos/${username}/${repoName}/contents/data/${fileName}`, { headers: setHeaders() })
-        .then(response => response.json())
-        .then(data => {
-          const content = atob(data.content); // Decode Base64 content
-          alert(`Content of ${fileName}:\n${content}`);
-        })
-        .catch(err => console.error(err));
-    }
-
-    // Delete Record
-    function deleteRecord(fileName) {
-      fetch(`${baseURL}/repos/${username}/${repoName}/contents/data/${fileName}`, { headers: setHeaders() })
-        .then(response => response.json())
-        .then(data => {
-          fetch(`${baseURL}/repos/${username}/${repoName}/contents/data/${fileName}`, {
-            method: 'DELETE',
-            headers: setHeaders(),
-            body: JSON.stringify({
-              message: `Delete record: ${fileName}`,
-              sha: data.sha, // Required to delete a file
-            })
-          })
-            .then(() => {
-              alert("Record deleted successfully!");
-              listRecords();
-            })
-            .catch(err => console.error(err));
-        })
-        .catch(err => console.error(err));
-    }
+    // Load resume on page load
+    loadResume();
   </script>
 </body>
 </html>
